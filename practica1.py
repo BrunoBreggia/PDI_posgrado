@@ -39,6 +39,8 @@ def guardar_imagen(ruta, img, color_space='BGR'):
     """
     if color_space == 'RGB':
         img = img[:, :, ::-1]  # Convert RGB to BGR
+    elif color_space == 'GRAY' and len(img.shape) == 3:
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     cv.imwrite(ruta, img)
 
 def mostrar_imagen_cv(titulo, img, mode='plt'):
@@ -116,6 +118,7 @@ def get_integer_points_on_line(p1, p2):
         y = y1 + i * step_y
         integer_points.append((x, y))
 
+    # Interpolate missing points to ensure connectivity
     interpolated_points = []
     temp = integer_points[0]
     interpolated_points.append(temp)
@@ -126,10 +129,33 @@ def get_integer_points_on_line(p1, p2):
         while pt[1] > temp[1]:
             temp = temp[0], temp[1]+1
             interpolated_points.append(temp)
+
     return interpolated_points
 
-def ver_perfil_intesidad(imagen):
-    """ Muestra el perfil de intesidad de una linea cualquiera seleccionada por el usuario."""
+def obtener_perfil_intensidad(imagen, p1, p2):
+    """ 
+    Obtiene el perfil de intensidad entre dos puntos dados.
+
+    Parámetros:
+    - imagen: Imagen en escala de grises o color (arreglo numpy).
+    - p1: Primer punto (x1, y1).
+    - p2: Segundo punto (x2, y2).
+
+    Retorna:
+    - intensidades: Lista de valores de intensidad a lo largo de la línea.
+    """
+    line_profile = get_integer_points_on_line(p1, p2)
+    intensities = np.array([imagen[pt[1], pt[0]] for pt in line_profile])
+    return intensities
+
+def perfil_intesidad_interactivo(imagen):
+    """ 
+    Muestra el perfil de intesidad de una linea cualquiera seleccionada 
+    por el usuario.
+
+    Parámetros:
+    - imagen: Imagen en escala de grises o color (arreglo numpy).
+    """
     # dibujar una linea sobre la imagen
     global imagen_copy
     imagen_copy = imagen.copy()
@@ -149,8 +175,7 @@ def ver_perfil_intesidad(imagen):
             cv.imshow('Imagen', imagen_copy)
 
             # Obtener perfil de intensidad
-            line_profile = get_integer_points_on_line(draw_line.inicio, (x, y))
-            intensities = np.array([imagen[pt[1], pt[0]] for pt in line_profile])
+            intensities = obtener_perfil_intensidad(imagen, draw_line.inicio, (x, y))
             if len(imagen.shape) == 3 and imagen.shape[2] == 3:  # Color image
                 plt.plot(intensities[:,0], "b", label='Perfil azul')
                 plt.plot(intensities[:,1], "g", label='Perfil verde')
@@ -181,4 +206,107 @@ def ver_perfil_intesidad(imagen):
 # Cargar imagen a color (Lenna.gif)
 img = leer_imagen(path/'Imagenes/botellas.tif', grey_scale=True, verbose=True)
 # visualizador_pixeles(img)
-ver_perfil_intesidad(img)
+perfil_intesidad_interactivo(img)
+
+
+# Ejercicio 3
+def saturar(perfil, umbral):
+    perfil_sat = np.where(perfil > umbral, umbral, perfil)
+    return perfil_sat
+  
+def normalizar(perfil):
+    perfil_norm = (perfil - np.min(perfil)) / (np.max(perfil) - np.min(perfil))
+    return perfil_norm
+
+def deteccion_botellas(img, bottom_sensing=10, umbral=0.25):
+    """ Detecta la cantidad de botellas en la imagen y sus anchuras.
+    Parámetros:
+    - img: Imagen en escala de grises (arreglo numpy).
+    - bottom_sensing: Número de píxeles desde la parte inferior para el perfil.
+    - umbral: Umbral para binarizar el perfil de intensidad.
+    Retorna:
+    - botellas_info: Lista de diccionarios con 'start', 'end' y 'width' de cada botella.
+    """
+    if len(img.shape) == 2:
+        rows, cols = img.shape
+    else:
+        rows, cols, _ = img.shape
+
+    init = (0, rows-1-bottom_sensing)
+    end = (cols-1, rows-1-bottom_sensing)
+
+    perfil = obtener_perfil_intensidad(img, init, end)
+
+    # preprocesamiento
+    perfil_sat = saturar(perfil, 128)
+    perfil_norm = normalizar(perfil_sat)
+    perfil_bin = (perfil_norm > umbral).astype(np.int8)
+    contours = np.diff(perfil_bin)
+
+    start_indices = np.where(contours > 0)[0]
+    end_indices = np.where(contours < 0)[0]
+    if start_indices[0] > end_indices[0]:
+        start_indices = np.insert(start_indices, 0, 0)
+    if len(end_indices) < len(start_indices):
+        end_indices = np.append(end_indices, cols-1)
+      
+    botellas_info = []
+    for start, end in zip(start_indices, end_indices):
+        width = end - start
+        botellas_info.append({'start': start, 'end': end, 'width': width})
+    return botellas_info
+
+def altura_de_llenado(img, botellas_info, full_reference=151):
+    """ Calcula altura de llenado (en pixeles) de las botellas halladas en la imagen
+    y su porcentaje de llenado en base un nivel de referencia. 
+    Agrega los datos calculados al diccionario botellas_info que recibe como parametro,
+    no retorna nada.
+    """
+    if len(img.shape) == 2:
+        rows, cols = img.shape
+    else:
+        rows, cols, _ = img.shape
+
+    for botella in botellas_info:
+        bottle_center = (botella["start"] + botella["end"])//2
+        perfil_vertical = obtener_perfil_intensidad(img, (bottle_center, 0), (bottle_center, rows-1))
+        perfil_vertical = normalizar(perfil_vertical)
+        perfil_vertical = (perfil_vertical > 0.80).astype(np.int8)
+        contours = np.diff(perfil_vertical)
+
+        dark_clear = np.where(contours > 0)[0]
+        clear_dark = np.where(contours < 0)[0]
+
+        top = dark_clear[0]
+        surface = clear_dark[0]
+        bottom = dark_clear[-1]
+        filling = bottom - surface
+
+        # Save the bottle data
+        botella["top"] = top
+        botella["surface"] = surface
+        botella["bottom"] = bottom
+        botella["filling"] = filling
+        botella["filling_percentage"] = np.round(filling/full_reference*100.0,2)
+    return botellas_info
+
+def ubicar_botellas(img, botellas_info):
+    """ Recibe una imagen y la lista de diccionarios con informacion sobre
+    ubicacion y porcentaje de llenado de botellas"""
+    botellas_copy = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+    
+    for botella in botellas_info:
+        cv.line(botellas_copy, (botella["start"], botella["surface"]), (botella["end"], botella["surface"]), (255, 100, 0), 2)
+        cv.rectangle(botellas_copy, (botella["start"], botella["top"]), (botella["end"], botella["bottom"]), (0, 255, 0), 2)
+        # write filling percentage
+        cv.putText(botellas_copy, f"{botella['filling_percentage']}%", (botella["start"]+3, botella["surface"]-10), cv.FONT_HERSHEY_SIMPLEX, 0.30, (255, 100, 0), 1)
+
+    plt.imshow(botellas_copy)
+    plt.title('Detección de Botellas y Nivel de Llenado')
+    plt.axis('off')
+    plt.show()
+    
+botellas = leer_imagen(path/'Imagenes/botellas.tif', grey_scale=True, verbose=False)
+botellas_info = deteccion_botellas(botellas)
+botellas_info = altura_de_llenado(botellas, botellas_info)
+ubicar_botellas(botellas, botellas_info)
