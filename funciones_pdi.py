@@ -185,7 +185,7 @@ def obtener_perfil_intensidad(imagen, p1, p2):
     intensities = np.array([imagen[pt[1], pt[0]] for pt in line_profile])
     return intensities
 
-def perfil_intesidad_interactivo(imagen):
+def perfil_intensidad_interactivo(imagen):
     """ 
     Muestra el perfil de intesidad de una linea cualquiera seleccionada 
     por el usuario.

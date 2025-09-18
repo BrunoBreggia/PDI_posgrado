@@ -1,4 +1,4 @@
-from funciones_pdi import obtener_perfil_intensidad
+from funciones_pdi import obtener_perfil_intensidad, perfil_intensidad_interactivo
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,17 +9,17 @@ mariposa = cv.imread(path/"Imagenes/mariposa02.png", cv.IMREAD_GRAYSCALE)
 flores = cv.imread(path/"Imagenes/flores02.jpg", cv.IMREAD_GRAYSCALE)
 lapices = cv.imread(path/"Imagenes/lapices02.jpg", cv.IMREAD_GRAYSCALE)
 
-mariposas = [
+mariposa_3 = [
     mariposa, # imagen original
     cv.GaussianBlur(mariposa, (15,15), 100), # desenfoque gaussiano
     cv.bilateralFilter(mariposa, 15, 100, 100), # gaussiano bilateral
 ]
-flores = [
+flores_3 = [
     flores, # imagen original
     cv.GaussianBlur(flores, (15,15), 100), # desenfoque gaussiano
     cv.bilateralFilter(flores, 15, 100, 100), # gaussiano bilateral
 ]
-lapices = [
+lapices_3 = [
     lapices, # imagen original
     cv.GaussianBlur(lapices, (15,15), 100), # desenfoque gaussiano
     cv.bilateralFilter(lapices, 15, 100, 100), # gaussiano bilateral
@@ -29,7 +29,7 @@ def perfilador_simultaneo(imgs, pto1, pto2):
     perfiles = [obtener_perfil_intensidad(img, pto1, pto2) for img in imgs]
     return perfiles
 
-def perfil_intesidad_interactivo(imagenes):
+def perfil_intensidad_interactivox3(imagenes):
     """ 
     Muestra el perfil de intesidad de una linea cualquiera seleccionada 
     por el usuario.
@@ -89,8 +89,10 @@ def perfil_intesidad_interactivo(imagenes):
     #cv.waitKey(0)
     cv.destroyAllWindows()
 
-perfil_intesidad_interactivo(mariposas)
-#perfil_intesidad_interactivo(flores)
-#perfil_intesidad_interactivo(lapices)
-#plt.imshow(lapices[0], cmap='gray', vmin=0, vmax=255)
+#perfil_intensidad_interactivox3(mariposas_3)
+#perfil_intensidad_interactivox3(flores_3)
+#perfil_intensidad_interactivox3(lapices_3)
+#plt.imshow(lapices_3[0], cmap='gray', vmin=0, vmax=255)
 #plt.show()
+
+perfil_intensidad_interactivo(lapices)
