@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 path = Path("../")
 
-# Ejercicio 1
+# Ejercicio 1: leer, guardar y mostrar imagenes
 def leer_imagen(ruta, grey_scale=True, color_space='BGR', verbose=True):
     """ Retorna una imagen en RGB o escala de grises.
     Parámetros:
@@ -59,7 +59,7 @@ def mostrar_imagen_cv(titulo, img, mode='plt'):
         cv.waitKey(0)
         cv.destroyAllWindows()
 
-# Ejercicio 2
+# Ejercicio 2: obtencion de perfiles de intensidad
 def visualizador_pixeles(imagen):
     """ Muestra el valor de los píxeles al hacer clic en la imagen.
     Parámetros:
@@ -209,7 +209,7 @@ img = leer_imagen(path/'Imagenes/botellas.tif', grey_scale=True, verbose=True)
 perfil_intesidad_interactivo(img)
 
 
-# Ejercicio 3
+# Ejercicio 3: deteccion de botellas y nivel de llenado
 def saturar(perfil, umbral):
     perfil_sat = np.where(perfil > umbral, umbral, perfil)
     return perfil_sat

@@ -103,11 +103,10 @@ def draw_line(event, x, y, flags, param):
         draw_line.ref_pt = [(x, y)]
 
     # mientras se mueve el mouse con el boton izquierdo presionado, se muestra la linea
-    # elif event == cv.EVENT_MOUSEMOVE and flags == cv.EVENT_FLAG_LBUTTON:
-    #     if hasattr(draw_line, 'ref_pt') and len(draw_line.ref_pt) == 1:
-    #         img3_copy = img3.copy()
-    #         cv.line(img3_copy, draw_line.ref_pt[0], (x, y), (0, 255, 0), 2)
-    #         cv.imshow('Cameraman', img3_copy)
+    elif event == cv.EVENT_MOUSEMOVE and flags == cv.EVENT_FLAG_LBUTTON:
+        img3_copy = img3.copy()
+        cv.line(img3_copy, draw_line.ref_pt[0], (x, y), (0, 255, 0), 2)
+        cv.imshow('Cameraman', img3_copy)
     
     # si se libera el boton se guarda localizacion de fin (x,y)
     elif event == cv.EVENT_LBUTTONUP:
